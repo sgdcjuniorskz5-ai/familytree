@@ -1,0 +1,544 @@
+<!DOCTYPE html>
+<html lang="ru" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Семейное Древо | Интерактивный генеалогический портал</title>
+  <!-- SEO tags -->
+  <meta name="description" content="Постройте и исследуйте свое семейное древо в удобном интерактивном формате с подсчетом степеней родства, визуальной статистикой и хронологической шкалой.">
+  <meta name="theme-color" content="#b45309">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="0">
+  <link rel="manifest" href="manifest.json">
+  <link rel="apple-touch-icon" href="icon-192.png">
+  
+  <!-- FontAwesome Icons & Google Fonts -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+  <!-- Header Bar -->
+  <header>
+    <div class="logo-container" id="logo-refresh" onclick="location.reload()">
+      <div class="logo-icon"><i class="fas fa-tree"></i></div>
+      <div class="logo-text">FamilyTree</div>
+    </div>
+
+    <div class="nav-controls">
+      <!-- Search -->
+      <div class="search-box">
+        <i class="fas fa-search"></i>
+        <input type="text" id="search-input" placeholder="Поиск родственников..." autocomplete="off">
+        <div class="search-dropdown" id="search-dropdown"></div>
+      </div>
+
+      <!-- Action Buttons -->
+      <button class="btn" id="open-db-btn" data-tooltip="База данных членов семьи">
+        <i class="fas fa-database"></i> Список
+      </button>
+      <button class="btn" id="open-stats-btn" data-tooltip="Статистика древа">
+        <i class="fas fa-chart-pie"></i> Статистика
+      </button>
+      <button class="btn" id="open-timeline-btn" data-tooltip="Хронология событий">
+        <i class="fas fa-history"></i> Хронология
+      </button>
+      <button class="btn" id="open-calc-btn" data-tooltip="Калькулятор родственных связей">
+        <i class="fas fa-calculator"></i> Калькулятор
+      </button>
+      
+      <button class="btn btn-primary" id="add-unconnected-menu-btn">
+        <i class="fas fa-user-plus"></i> Добавить человека
+      </button>
+
+      <span style="width: 1px; height: 24px; background: var(--border-color); margin: 0 5px;"></span>
+
+      <!-- Theme & Backup -->
+      <button class="btn btn-icon" id="theme-toggle" data-tooltip="Сменить тему">
+        <i class="fas fa-sun"></i>
+      </button>
+      <button class="btn btn-icon" id="export-json-btn" data-tooltip="Экспортировать древо (JSON)">
+        <i class="fas fa-file-download"></i>
+      </button>
+      <label class="btn btn-icon" for="import-json-input" data-tooltip="Импортировать древо (JSON)" style="display:flex; align-items:center; justify-content:center; cursor:pointer;">
+        <i class="fas fa-file-upload"></i>
+        <input type="file" id="import-json-input" accept=".json" style="display:none;">
+      </label>
+      <button class="btn btn-icon" id="reset-tree-btn" data-tooltip="Сбросить древо до демо-данных" style="color: #ef4444;">
+        <i class="fas fa-undo"></i>
+      </button>
+      <button class="btn btn-icon" id="mass-select-toggle-btn" data-tooltip="Массовое удаление">
+        <i class="fas fa-check-double"></i>
+      </button>
+      <span class="header-divider"></span>
+      <button class="btn btn-icon" id="export-png-btn" data-tooltip="Экспорт в PNG">
+        <i class="fas fa-image"></i>
+      </button>
+      <button class="btn btn-icon" id="export-svg-btn" data-tooltip="Экспорт в SVG">
+        <i class="fas fa-vector-square"></i>
+      </button>
+    </div>
+  </header>
+
+  <!-- Selection Mode Banner -->
+  <div class="selection-banner" id="selection-banner">
+    <i class="fas fa-link" style="color:#3b82f6;"></i>
+    <span id="selection-banner-text">Режим связи: Выберите человека...</span>
+    <button class="selection-banner-btn" id="cancel-selection-btn">Отмена</button>
+  </div>
+
+  <!-- Mass Selection Bar -->
+  <div class="mass-select-bar" id="mass-select-bar">
+    <i class="fas fa-check-double" style="color:var(--accent-gold);"></i>
+    <span>Выбрано: <span class="mass-count" id="mass-count">0</span></span>
+    <button class="mass-select-all-btn" id="mass-select-all-btn">Выбрать всех</button>
+    <button class="mass-delete-btn" id="mass-delete-btn"><i class="fas fa-trash"></i> Удалить выбранные</button>
+    <button class="mass-cancel-btn" id="mass-cancel-btn">Отмена</button>
+  </div>
+
+  <!-- Interactive Tree View Area -->
+  <main id="canvas-container">
+    <!-- Undo/Redo Toolbar -->
+    <div class="undo-redo-bar">
+      <button data-action="undo" onclick="undo()" disabled data-tooltip="Отменить (Ctrl+Z)"><i class="fas fa-undo"></i></button>
+      <span class="undo-count"></span>
+      <button data-action="redo" onclick="redo()" disabled data-tooltip="Повторить (Ctrl+Y)"><i class="fas fa-redo"></i></button>
+      <span class="redo-count"></span>
+    </div>
+
+    <svg id="tree-canvas">
+      <!-- Defines markers, drop shadows and gradients -->
+      <defs>
+        <filter id="shadow" x="-10%" y="-10%" width="120%" height="120%">
+          <feDropShadow dx="0" dy="4" stdDeviation="6" flood-color="#000000" flood-opacity="0.15"/>
+        </filter>
+      </defs>
+      <!-- All tree items are rendered within this zoomable group -->
+      <g id="zoom-group"></g>
+    </svg>
+
+    <!-- Floating Zoom Controls -->
+    <div class="view-controls">
+      <button id="zoom-in" data-tooltip="Приблизить"><i class="fas fa-plus"></i></button>
+      <button id="zoom-out" data-tooltip="Отдалить"><i class="fas fa-minus"></i></button>
+      <button id="zoom-fit" data-tooltip="Показать всё"><i class="fas fa-expand"></i></button>
+      <button id="recenter-node" data-tooltip="Центрировать на главном"><i class="fas fa-crosshairs"></i></button>
+      <button id="toggle-drag-mode" data-tooltip="Режим перемещения карточек"><i class="fas fa-arrows-alt"></i></button>
+    </div>
+
+    <!-- Floating Action Add Person Button (Bottom Right) -->
+    <div class="floating-actions">
+      <button class="btn btn-primary" id="add-unconnected-btn" style="border-radius: 50%; width: 56px; height: 56px; padding:0; justify-content:center; font-size:18px;">
+        <i class="fas fa-plus"></i>
+      </button>
+    </div>
+  </main>
+
+  <!-- Sidebar sliding drawer (Profile, edit, relations) -->
+  <aside id="sidebar">
+    <div class="sidebar-header">
+      <h3 id="sidebar-title">Имя родственника</h3>
+      <button class="close-sidebar-btn" id="close-sidebar"><i class="fas fa-times"></i></button>
+    </div>
+    
+    <div class="sidebar-tabs">
+      <button class="tab-btn active" data-tab="profile">Профиль</button>
+      <button class="tab-btn" data-tab="edit">Изменить</button>
+      <button class="tab-btn" data-tab="relations">Связи</button>
+    </div>
+
+    <div class="sidebar-content">
+      <!-- Tab 1: Profile View -->
+      <div class="tab-panel active" id="tab-profile">
+        <div class="profile-view">
+          <img src="" id="profile-avatar-large" class="profile-avatar-large" alt="Аватар">
+          <!-- Initial Letter Avatar (Fallback) -->
+          <div id="profile-avatar-initials" class="profile-avatar-large" style="display:none; align-items:center; justify-content:center; background:linear-gradient(135deg, #94a3b8, #64748b); color:white; font-weight:700; font-size:36px; border:3px solid white;">A</div>
+          
+          <h2 id="profile-name">Имя Фамилия</h2>
+          <p id="profile-maiden" class="profile-maiden"></p>
+          <p id="profile-life-years" class="profile-life-years">1900 - 1980</p>
+          
+          <div class="profile-meta-grid">
+            <div class="profile-meta-item">
+              <span class="profile-meta-label">Пол</span>
+              <span class="profile-meta-val" id="profile-gender">Мужской</span>
+            </div>
+            <div class="profile-meta-item">
+              <span class="profile-meta-label">Рождение</span>
+              <span class="profile-meta-val" id="profile-birth">12 мая 1910 (Гамбург)</span>
+            </div>
+            <div class="profile-meta-item" id="profile-death-item">
+              <span class="profile-meta-label">Смерть</span>
+              <span class="profile-meta-val" id="profile-death">20 августа 1995 (Санкт-Петербург)</span>
+            </div>
+            <div class="profile-meta-item">
+              <span class="profile-meta-label">Деятельность</span>
+              <span class="profile-meta-val" id="profile-job">Архитектор</span>
+            </div>
+          </div>
+          
+          <div class="profile-bio">
+            <span class="profile-meta-label">Биография</span>
+            <p id="profile-bio-text" class="profile-bio-text">Здесь будет подробное жизнеописание родственника...</p>
+          </div>
+
+          <!-- Immediate Relations List -->
+          <div class="profile-relations">
+            <h4>Ближайшие родственники</h4>
+            <div class="relations-list" id="profile-relations-list"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tab 2: Edit Form -->
+      <div class="tab-panel" id="tab-edit">
+        <form id="edit-profile-form">
+          <div class="form-row">
+            <div class="form-group">
+              <label for="edit-firstName">Имя</label>
+              <input type="text" id="edit-firstName" class="form-input" required>
+            </div>
+            <div class="form-group">
+              <label for="edit-lastName">Фамилия</label>
+              <input type="text" id="edit-lastName" class="form-input">
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="edit-maidenName">Девичья фамилия</label>
+            <input type="text" id="edit-maidenName" class="form-input">
+          </div>
+
+          <div class="form-group">
+            <label for="edit-gender">Пол</label>
+            <select id="edit-gender" class="form-select">
+              <option value="male">Мужской</option>
+              <option value="female">Женский</option>
+              <option value="other">Другой / Не указан</option>
+            </select>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label for="edit-birthDate">Дата рождения</label>
+              <input type="date" id="edit-birthDate" class="form-input">
+            </div>
+            <div class="form-group">
+              <label for="edit-birthPlace">Место рождения</label>
+              <input type="text" id="edit-birthPlace" class="form-input">
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label for="edit-deathDate">Дата смерти</label>
+              <input type="date" id="edit-deathDate" class="form-input">
+            </div>
+            <div class="form-group">
+              <label for="edit-deathPlace">Место смерти</label>
+              <input type="text" id="edit-deathPlace" class="form-input">
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="edit-occupation">Вид деятельности</label>
+            <input type="text" id="edit-occupation" class="form-input">
+          </div>
+
+          <div class="form-group">
+            <label for="edit-bio">Биография / Заметки</label>
+            <textarea id="edit-bio" class="form-textarea"></textarea>
+          </div>
+
+          <div class="form-group">
+            <label>Ссылка на фото / Аватар</label>
+            <div class="avatar-selector">
+              <img src="https://via.placeholder.com/150" id="edit-avatar-preview" class="avatar-preview-edit" alt="Предпросмотр">
+              <input type="url" id="edit-avatar" class="form-input" placeholder="https://example.com/avatar.jpg" style="width:100%; margin-top:5px;" oninput="document.getElementById('edit-avatar-preview').src = this.value || 'https://via.placeholder.com/150'">
+            </div>
+          </div>
+
+          <div class="sidebar-bottom-actions">
+            <button type="button" class="btn btn-danger" id="delete-member-btn"><i class="fas fa-trash"></i> Удалить</button>
+            <button type="submit" class="btn btn-primary"><i class="fas fa-save"></i> Сохранить</button>
+          </div>
+        </form>
+      </div>
+
+      <!-- Tab 3: Relations Connector Panel -->
+      <div class="tab-panel" id="tab-relations">
+        <div id="relations-actions-container">
+          <!-- Dynamic relationship buttons populated by JS -->
+        </div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- Modal: Relationship Calculator -->
+  <div class="modal-overlay" id="modal-calc">
+    <div class="modal-container">
+      <div class="modal-header">
+        <h3>Калькулятор родства</h3>
+        <button class="close-modal-btn"><i class="fas fa-times"></i></button>
+      </div>
+      <div class="modal-body">
+        <div class="calc-grid">
+          <div class="calc-person-select">
+            <label for="calc-select-a" style="font-size:11px; text-transform:uppercase; color:var(--text-muted); font-weight:600;">Персона А</label>
+            <select id="calc-select-a" class="form-select"></select>
+          </div>
+          <div class="calc-arrow">
+            <i class="fas fa-exchange-alt"></i>
+          </div>
+          <div class="calc-person-select">
+            <label for="calc-select-b" style="font-size:11px; text-transform:uppercase; color:var(--text-muted); font-weight:600;">Персона B</label>
+            <select id="calc-select-b" class="form-select"></select>
+          </div>
+        </div>
+        <div class="calc-result-box">
+          <div class="calc-result-label">Степень родства (A к B)</div>
+          <div class="calc-result-val" id="calc-result">Рассчитывается...</div>
+          <div class="calc-result-desc" id="calc-desc"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Statistics Dashboard -->
+  <div class="modal-overlay" id="modal-stats">
+    <div class="modal-container">
+      <div class="modal-header">
+        <h3>Статистика древа</h3>
+        <button class="close-modal-btn"><i class="fas fa-times"></i></button>
+      </div>
+      <div class="modal-body">
+        <div class="stats-grid">
+          <div class="stats-card">
+            <h4>Всего родственников</h4>
+            <div class="stats-value" id="stats-total-members">0</div>
+            <div class="stats-label" id="stats-living-count">0 живы / 0 ушли</div>
+          </div>
+          <div class="stats-card">
+            <h4>Ср. продолжительность жизни</h4>
+            <div class="stats-value" id="stats-avg-lifespan">0 лет</div>
+            <div class="stats-label" id="stats-avg-lifespan-sub">По известным датам</div>
+          </div>
+          <div class="stats-card">
+            <h4>Половой состав</h4>
+            <div id="stats-gender-list" class="stats-list"></div>
+          </div>
+          <div class="stats-card">
+            <h4>Популярные фамилии</h4>
+            <div id="stats-surnames-list" class="stats-list"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Timeline events -->
+  <div class="modal-overlay" id="modal-timeline">
+    <div class="modal-container" style="max-width: 550px;">
+      <div class="modal-header">
+        <h3>Хроника событий семьи</h3>
+        <button class="close-modal-btn"><i class="fas fa-times"></i></button>
+      </div>
+      <div class="modal-body">
+        <div class="timeline-container" id="timeline-events-container">
+          <!-- Dynamic timeline nodes populated by JS -->
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Database members search & list -->
+  <div class="modal-overlay" id="modal-db">
+    <div class="modal-container">
+      <div class="modal-header">
+        <h3>Список всех родственников в базе</h3>
+        <button class="close-modal-btn"><i class="fas fa-times"></i></button>
+      </div>
+      <div class="modal-body">
+        <div style="display:flex; gap:10px; margin-bottom:15px;">
+          <div class="form-group" style="position:relative; flex:1; margin-bottom:0;">
+            <input type="text" id="db-search-input" class="form-input" placeholder="Поиск по имени, фамилии или делу..." style="padding-left:35px; user-select:text;">
+            <i class="fas fa-search" style="position:absolute; left:12px; top:50%; transform:translateY(-50%); color:var(--text-muted);"></i>
+          </div>
+          <button class="btn btn-danger" id="remove-duplicates-btn" data-tooltip="Удалить людей с одинаковым именем и датой рождения" style="white-space:nowrap;">
+            <i class="fas fa-clone"></i> Удалить дубли
+          </button>
+        </div>
+        <div id="duplicates-count" style="font-size:12px; color:var(--text-muted); margin-bottom:10px;"></div>
+        <div class="member-list-grid" id="db-members-grid"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Add New Connected Relative (triggered from Relations tab) -->
+  <div class="modal-overlay" id="modal-add-relative">
+    <div class="modal-container" style="max-width: 500px;">
+      <div class="modal-header">
+        <h3 id="add-relative-title">Создать родственника</h3>
+        <button class="close-modal-btn"><i class="fas fa-times"></i></button>
+      </div>
+      <div class="modal-body">
+        <form id="add-relative-form">
+          <div class="form-row">
+            <div class="form-group">
+              <label for="rel-firstName">Имя</label>
+              <input type="text" id="rel-firstName" class="form-input" required>
+            </div>
+            <div class="form-group">
+              <label for="rel-lastName">Фамилия</label>
+              <input type="text" id="rel-lastName" class="form-input" required>
+            </div>
+          </div>
+          <div class="form-group">
+            <label for="rel-maidenName">Девичья фамилия</label>
+            <input type="text" id="rel-maidenName" class="form-input">
+          </div>
+          <div class="form-group">
+            <label for="rel-gender">Пол</label>
+            <select id="rel-gender" class="form-select">
+              <option value="male">Мужской</option>
+              <option value="female">Женский</option>
+              <option value="other">Другой / Не указан</option>
+            </select>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label for="rel-birthDate">Дата рождения</label>
+              <input type="date" id="rel-birthDate" class="form-input">
+            </div>
+            <div class="form-group">
+              <label for="rel-birthPlace">Место рождения</label>
+              <input type="text" id="rel-birthPlace" class="form-input">
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label for="rel-deathDate">Дата смерти</label>
+              <input type="date" id="rel-deathDate" class="form-input">
+            </div>
+            <div class="form-group">
+              <label for="rel-deathPlace">Место смерти</label>
+              <input type="text" id="rel-deathPlace" class="form-input">
+            </div>
+          </div>
+          <div class="form-group">
+            <label for="rel-occupation">Вид деятельности</label>
+            <input type="text" id="rel-occupation" class="form-input">
+          </div>
+          <div class="form-group">
+            <label for="rel-bio">Краткая биография</label>
+            <textarea id="rel-bio" class="form-textarea"></textarea>
+          </div>
+          <div class="form-group">
+            <label for="rel-avatar">Ссылка на фото</label>
+            <input type="url" id="rel-avatar" class="form-input" placeholder="https://example.com/photo.jpg">
+          </div>
+          <button type="submit" class="btn btn-primary" style="width:100%; height:44px; margin-top:10px;"><i class="fas fa-user-plus"></i> Создать и привязать</button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Add New Unconnected Member (triggered from Header/Floating button) -->
+  <div class="modal-overlay" id="modal-new-member">
+    <div class="modal-container" style="max-width: 500px;">
+      <div class="modal-header">
+        <h3>Добавить человека вне древа</h3>
+        <button class="close-modal-btn"><i class="fas fa-times"></i></button>
+      </div>
+      <div class="modal-body">
+        <form id="new-member-form">
+          <div class="form-row">
+            <div class="form-group">
+              <label for="new-firstName">Имя</label>
+              <input type="text" id="new-firstName" class="form-input" required>
+            </div>
+            <div class="form-group">
+              <label for="new-lastName">Фамилия</label>
+              <input type="text" id="new-lastName" class="form-input" required>
+            </div>
+          </div>
+          <div class="form-group">
+            <label for="new-maidenName">Девичья фамилия</label>
+            <input type="text" id="new-maidenName" class="form-input">
+          </div>
+          <div class="form-group">
+            <label for="new-gender">Пол</label>
+            <select id="new-gender" class="form-select">
+              <option value="male">Мужской</option>
+              <option value="female">Женский</option>
+              <option value="other">Другой / Не указан</option>
+            </select>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label for="new-birthDate">Дата рождения</label>
+              <input type="date" id="new-birthDate" class="form-input">
+            </div>
+            <div class="form-group">
+              <label for="new-birthPlace">Место рождения</label>
+              <input type="text" id="new-birthPlace" class="form-input">
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label for="new-deathDate">Дата смерти</label>
+              <input type="date" id="new-deathDate" class="form-input">
+            </div>
+            <div class="form-group">
+              <label for="new-deathPlace">Место смерти</label>
+              <input type="text" id="new-deathPlace" class="form-input">
+            </div>
+          </div>
+          <div class="form-group">
+            <label for="new-occupation">Вид деятельности</label>
+            <input type="text" id="new-occupation" class="form-input">
+          </div>
+          <div class="form-group">
+            <label for="new-bio">Краткая биография</label>
+            <textarea id="new-bio" class="form-textarea"></textarea>
+          </div>
+          <div class="form-group">
+            <label for="new-avatar">Ссылка на фото</label>
+            <input type="url" id="new-avatar" class="form-input" placeholder="https://example.com/photo.jpg">
+          </div>
+          <button type="submit" class="btn btn-primary" style="width:100%; height:44px; margin-top:10px;"><i class="fas fa-user-plus"></i> Создать карточку</button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- Load scripts in correct order as plain scripts (offline compatible) -->
+  <script src="sample-data.js?v=7"></script>
+  <script src="relationship.js?v=7"></script>
+  <script src="tree-layout.js?v=7"></script>
+  <script src="tree-renderer.js?v=7"></script>
+  <script src="app.js?v=7"></script>
+
+  <!-- Toast Notification Container -->
+  <div id="toast-container"></div>
+
+  <!-- Register Service Worker for PWA Offline Support -->
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('service-worker.js')
+          .then(reg => {
+            console.log('[App] Service Worker registered:', reg.scope);
+          })
+          .catch(err => {
+            console.warn('[App] SW registration failed:', err);
+          });
+      });
+    }
+  </script>
+</body>
+</html>
