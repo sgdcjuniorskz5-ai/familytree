@@ -137,6 +137,7 @@ header {
   padding: 0 20px;
   z-index: 50;
   box-shadow: var(--shadow-md);
+  overflow: hidden;
 }
 
 .logo-container {
@@ -173,12 +174,21 @@ header {
 .nav-controls {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 8px;
+  flex-shrink: 1;
+  min-width: 0;
+  overflow-x: auto;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.nav-controls::-webkit-scrollbar {
+  display: none;
 }
 
 .search-box {
   position: relative;
-  width: 260px;
+  width: 220px;
+  flex-shrink: 0;
 }
 
 .search-box input {
@@ -272,7 +282,7 @@ header {
 /* Buttons */
 .btn {
   height: 38px;
-  padding: 0 16px;
+  padding: 0 14px;
   border-radius: 10px;
   border: 1px solid var(--border-color);
   background: var(--bg-secondary);
@@ -282,8 +292,10 @@ header {
   cursor: pointer;
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
   transition: all 0.2s ease;
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 
 .btn:hover {
@@ -1649,4 +1661,24 @@ svg .card-select-checkbox {
 }
 #canvas-container.drag-mode .card-node:hover {
   filter: brightness(1.15) drop-shadow(0 0 6px var(--accent-gold));
+}
+
+/* --- Responsive Header --- */
+@media (max-width: 1100px) {
+  .nav-controls .btn:not(.btn-icon):not(.btn-primary) span,
+  .nav-controls .btn:not(.btn-icon):not(.btn-primary) {
+    font-size: 0;
+    padding: 0 10px;
+    gap: 0;
+  }
+  .nav-controls .btn:not(.btn-icon):not(.btn-primary) i {
+    font-size: 16px;
+  }
+  .search-box { width: 180px; }
+}
+@media (max-width: 800px) {
+  .search-box { width: 140px; }
+  .nav-controls { gap: 4px; }
+  .btn-primary { padding: 0 10px; }
+  .btn-primary span { display: none; }
 }
