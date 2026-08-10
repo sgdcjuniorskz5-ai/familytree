@@ -1753,7 +1753,10 @@ svg .card-select-checkbox {
 
   .nav-controls .header-divider { display: none; }
 
-  #canvas-container { bottom: 60px; }
+  #canvas-container {
+    padding-bottom: 60px;
+    touch-action: none;
+  }
 
   .undo-redo-bar {
     top: 10px;
@@ -1949,6 +1952,7 @@ svg .card-select-checkbox {
   .search-item { padding: 12px 15px; min-height: 44px; }
   .db-member-card { min-height: 56px; }
   .view-controls button { min-width: 44px; min-height: 44px; }
+  #tree-canvas { touch-action: none; }
 }
 
 /* ===== LANDSCAPE MOBILE ===== */

@@ -526,17 +526,25 @@
   <!-- Toast Notification Container -->
   <div id="toast-container"></div>
 
-  <!-- Register Service Worker for PWA Offline Support -->
+  <!-- Force-unregister old service workers, then register fresh -->
   <script>
     if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.getRegistrations().then(regs => {
+        regs.forEach(r => {
+          r.unregister();
+          console.log('[App] Unregistered old SW:', r.scope);
+        });
+      });
+      caches.keys().then(names => {
+        names.forEach(n => {
+          caches.delete(n);
+          console.log('[App] Deleted old cache:', n);
+        });
+      });
       window.addEventListener('load', () => {
-        navigator.serviceWorker.register('service-worker.js')
-          .then(reg => {
-            console.log('[App] Service Worker registered:', reg.scope);
-          })
-          .catch(err => {
-            console.warn('[App] SW registration failed:', err);
-          });
+        navigator.serviceWorker.register('service-worker.js?v=9')
+          .then(reg => console.log('[App] SW registered:', reg.scope))
+          .catch(err => console.warn('[App] SW failed:', err));
       });
     }
   </script>
