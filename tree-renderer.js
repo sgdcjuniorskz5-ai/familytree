@@ -44,7 +44,11 @@ function initTreeRenderer(containerId, svgId, onSelect, onFocus) {
     _applyTransform();
   });
 
+  // Touch variables for pan/zoom
   let isDragging = false, dragX = 0, dragY = 0;
+  let lastTouchDist = 0;
+  let lastTouchCenter = { x: 0, y: 0 };
+
   _containerEl.addEventListener('mousedown', (e) => {
     if (e.target.closest('.card-node')) return;
     isDragging = true;
@@ -52,6 +56,69 @@ function initTreeRenderer(containerId, svgId, onSelect, onFocus) {
     dragY = e.clientY;
     _containerEl.style.cursor = 'grabbing';
   });
+
+  // Touch events for mobile pan/zoom
+  _containerEl.addEventListener('touchstart', (e) => {
+    const target = e.target;
+    if (target.closest('.card-node') || target.closest('.card-select-checkbox')) return;
+    
+    if (e.touches.length === 1) {
+      isDragging = true;
+      dragX = e.touches[0].clientX;
+      dragY = e.touches[0].clientY;
+      e.preventDefault();
+    } else if (e.touches.length === 2) {
+      // Pinch to zoom
+      const t1 = e.touches[0];
+      const t2 = e.touches[1];
+      lastTouchDist = Math.hypot(t2.clientX - t1.clientX, t2.clientY - t1.clientY);
+      lastTouchCenter = { x: (t1.clientX + t2.clientX) / 2, y: (t1.clientY + t2.clientY) / 2 };
+      isDragging = false;
+      e.preventDefault();
+    }
+  }, { passive: false });
+
+  _containerEl.addEventListener('touchmove', (e) => {
+    if (e.touches.length === 1 && isDragging) {
+      const dx = e.touches[0].clientX - dragX;
+      const dy = e.touches[0].clientY - dragY;
+      _transformState.x += dx;
+      _transformState.y += dy;
+      dragX = e.touches[0].clientX;
+      dragY = e.touches[0].clientY;
+      _applyTransform();
+      e.preventDefault();
+    } else if (e.touches.length === 2) {
+      // Pinch zoom
+      const t1 = e.touches[0];
+      const t2 = e.touches[1];
+      const dist = Math.hypot(t2.clientX - t1.clientX, t2.clientY - t1.clientY);
+      const center = { x: (t1.clientX + t2.clientX) / 2, y: (t1.clientY + t2.clientY) / 2 };
+      
+      if (lastTouchDist > 0) {
+        const scale = dist / lastTouchDist;
+        const rect = _svgEl.getBoundingClientRect();
+        const mx = center.x - rect.left;
+        const my = center.y - rect.top;
+        
+        let nextK = _transformState.k * scale;
+        nextK = Math.max(0.15, Math.min(2.5, nextK));
+        _transformState.x = mx - (mx - _transformState.x) * (nextK / _transformState.k);
+        _transformState.y = my - (my - _transformState.y) * (nextK / _transformState.k);
+        _transformState.k = nextK;
+        _applyTransform();
+      }
+      lastTouchDist = dist;
+      lastTouchCenter = center;
+      e.preventDefault();
+    }
+  }, { passive: false });
+
+  _containerEl.addEventListener('touchend', (e) => {
+    isDragging = false;
+    lastTouchDist = 0;
+  });
+
   window.addEventListener('mousemove', (e) => {
     if (!isDragging) return;
     _transformState.x += e.clientX - dragX;
