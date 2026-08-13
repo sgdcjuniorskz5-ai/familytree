@@ -209,6 +209,46 @@ let state = {
 const AUTH_KEY = 'family_tree_users';
 const SESSION_KEY = 'family_tree_session';
 
+// --- Device Mode ---
+const DEVICE_MODE_KEY = 'family_tree_device_mode';
+
+function getDeviceMode() {
+  return localStorage.getItem(DEVICE_MODE_KEY) || 'auto';
+}
+
+function setDeviceMode(mode) {
+  localStorage.setItem(DEVICE_MODE_KEY, mode);
+  applyDeviceMode(mode);
+}
+
+function applyDeviceMode(mode) {
+  const body = document.body;
+  body.classList.remove('force-desktop', 'force-mobile');
+  if (mode === 'desktop') {
+    body.classList.add('force-desktop');
+  } else if (mode === 'mobile') {
+    body.classList.add('force-mobile');
+  }
+  // Update toggle button icon
+  const toggleBtn = document.getElementById('device-mode-btn');
+  if (toggleBtn) {
+    const icons = { auto: 'fa-desktop', desktop: 'fa-laptop', mobile: 'fa-mobile-alt' };
+    const tips = { auto: 'Авто (устройство)', desktop: 'Версия ПК', mobile: 'Версия телефона' };
+    toggleBtn.innerHTML = `<i class="fas ${icons[mode] || icons.auto}"></i>`;
+    toggleBtn.setAttribute('data-tooltip', tips[mode] || tips.auto);
+  }
+}
+
+function showDeviceModal() {
+  openModal('modal-device-select');
+}
+
+function selectDeviceMode(mode) {
+  setDeviceMode(mode);
+  closeModal('modal-device-select');
+  location.reload();
+}
+
 async function hashPassword(password, salt) {
   const encoder = new TextEncoder();
   const keyMaterial = await crypto.subtle.importKey(
@@ -349,6 +389,15 @@ let searchHighlightIndex = -1;
 
 // Initialize Application
 document.addEventListener('DOMContentLoaded', () => {
+  // Apply saved device mode
+  const savedMode = getDeviceMode();
+  applyDeviceMode(savedMode);
+
+  // Show device selector on first visit
+  if (!localStorage.getItem(DEVICE_MODE_KEY)) {
+    setTimeout(() => showDeviceModal(), 500);
+  }
+
   loadState();
   initTheme();
   initUIEvents();
@@ -630,6 +679,9 @@ function initUIEvents() {
       showAuthModal();
     }
   });
+
+  // Device Mode Button
+  document.getElementById('device-mode-btn').addEventListener('click', showDeviceModal);
 
   // Modals Buttons
   initModalTriggers();

@@ -76,6 +76,9 @@
       <button class="btn btn-icon" id="user-account-btn" data-tooltip="Аккаунт">
         <i class="fas fa-user"></i>
       </button>
+      <button class="btn btn-icon" id="device-mode-btn" data-tooltip="Авто (устройство)">
+        <i class="fas fa-desktop"></i>
+      </button>
       <span class="header-divider"></span>
       <button class="btn btn-icon" id="export-png-btn" data-tooltip="Экспорт в PNG">
         <i class="fas fa-image"></i>
@@ -570,6 +573,40 @@
       </form>
       <p style="text-align:center; margin-top:15px; font-size:13px; color:var(--text-secondary);">
         Уже есть аккаунт? <button type="button" class="btn-link" id="switch-to-login">Войти</button>
+      </p>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Device Selection -->
+<div class="modal-overlay" id="modal-device-select" style="z-index:9999;">
+  <div class="modal-container" style="max-width: 420px;">
+    <div class="modal-header">
+      <h3><i class="fas fa-mobile-alt" style="color:var(--accent-gold);"></i> Выберите версию</h3>
+    </div>
+    <div class="modal-body">
+      <p style="text-align:center; font-size:14px; color:var(--text-secondary); margin-bottom:20px;">
+        С какого устройства вы открываете сайт?
+      </p>
+      <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:12px;">
+        <button onclick="selectDeviceMode('auto')" style="display:flex; flex-direction:column; align-items:center; gap:10px; padding:20px 10px; border-radius:14px; border:2px solid var(--border-color); background:var(--bg-secondary); cursor:pointer; transition:all 0.2s;">
+          <i class="fas fa-sync-alt" style="font-size:28px; color:var(--accent-gold);"></i>
+          <span style="font-size:13px; font-weight:600;">Авто</span>
+          <span style="font-size:11px; color:var(--text-muted); text-align:center;">Определить автоматически</span>
+        </button>
+        <button onclick="selectDeviceMode('desktop')" style="display:flex; flex-direction:column; align-items:center; gap:10px; padding:20px 10px; border-radius:14px; border:2px solid var(--border-color); background:var(--bg-secondary); cursor:pointer; transition:all 0.2s;">
+          <i class="fas fa-laptop" style="font-size:28px; color:var(--accent-gold);"></i>
+          <span style="font-size:13px; font-weight:600;">ПК</span>
+          <span style="font-size:11px; color:var(--text-muted); text-align:center;">Полная версия</span>
+        </button>
+        <button onclick="selectDeviceMode('mobile')" style="display:flex; flex-direction:column; align-items:center; gap:10px; padding:20px 10px; border-radius:14px; border:2px solid var(--border-color); background:var(--bg-secondary); cursor:pointer; transition:all 0.2s;">
+          <i class="fas fa-mobile-alt" style="font-size:28px; color:var(--accent-gold);"></i>
+          <span style="font-size:13px; font-weight:600;">Телефон</span>
+          <span style="font-size:11px; color:var(--text-muted); text-align:center;">Удобная версия</span>
+        </button>
+      </div>
+      <p style="text-align:center; font-size:11px; color:var(--text-muted); margin-top:15px;">
+        Выбор можно изменить в любое время через кнопку <i class="fas fa-desktop" style="font-size:10px;"></i> в хедере
       </p>
     </div>
   </div>
