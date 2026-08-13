@@ -1,7 +1,7 @@
 // service-worker.js
 // Family Tree PWA Service Worker - Network First Strategy
 
-const CACHE_NAME = 'family-tree-v13';
+const CACHE_NAME = 'family-tree-v14';
 
 const PRECACHE_URLS = [
   './',

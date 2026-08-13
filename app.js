@@ -1570,7 +1570,8 @@ function exportPNG() {
   showToast('Подготовка PNG...', 'info', 1500);
 
   const clone = svgEl.cloneNode(true);
-  // Calculate bounding box of all content
+  const cloneZoom = clone.querySelector('#zoom-group');
+  cloneZoom.removeAttribute('transform');
   let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
   if (currentLayout && currentLayout.nodes.length > 0) {
     currentLayout.nodes.forEach(n => {
@@ -1625,6 +1626,8 @@ function exportSVG() {
   }
 
   const clone = svgEl.cloneNode(true);
+  const cloneZoom = clone.querySelector('#zoom-group');
+  cloneZoom.removeAttribute('transform');
   let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
   if (currentLayout && currentLayout.nodes.length > 0) {
     currentLayout.nodes.forEach(n => {
