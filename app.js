@@ -291,37 +291,43 @@ function getCurrentUser() {
   return session ? JSON.parse(session) : null;
 }
 
-function setCurrentUser(username) {
-  localStorage.setItem(SESSION_KEY, JSON.stringify({ username, loginTime: Date.now() }));
+function setCurrentUser(email, name) {
+  localStorage.setItem(SESSION_KEY, JSON.stringify({ email, name, loginTime: Date.now() }));
 }
 
 function clearCurrentUser() {
   localStorage.removeItem(SESSION_KEY);
 }
 
-async function registerUser(username, password) {
+function validateEmail(email) {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+}
+
+async function registerUser(email, name, password) {
   const users = getUsers();
-  if (users[username]) {
-    throw new Error('Пользователь уже существует');
+  const key = email.toLowerCase().trim();
+  if (users[key]) {
+    throw new Error('Аккаунт с этой почтой уже существует');
   }
   const salt = generateSalt();
   const passwordHash = await hashPassword(password, salt);
-  users[username] = { salt, passwordHash, createdAt: Date.now() };
+  users[key] = { email: key, name: name.trim(), salt, passwordHash, createdAt: Date.now() };
   saveUsers(users);
   return true;
 }
 
-async function loginUser(username, password) {
+async function loginUser(email, password) {
   const users = getUsers();
-  const user = users[username];
+  const key = email.toLowerCase().trim();
+  const user = users[key];
   if (!user) {
-    throw new Error('Пользователь не найден');
+    throw new Error('Аккаунт не найден');
   }
   const passwordHash = await hashPassword(password, user.salt);
   if (passwordHash !== user.passwordHash) {
     throw new Error('Неверный пароль');
   }
-  setCurrentUser(username);
+  setCurrentUser(key, user.name);
   return true;
 }
 
@@ -330,8 +336,8 @@ function logoutUser() {
   location.reload();
 }
 
-function getUserDataKey(username) {
-  return `family_tree_state_${username}`;
+function getUserDataKey(email) {
+  return `family_tree_state_${email}`;
 }
 
 function loadState() {
@@ -341,7 +347,7 @@ function loadState() {
     return;
   }
   
-  const saved = localStorage.getItem(getUserDataKey(currentUser.username));
+  const saved = localStorage.getItem(getUserDataKey(currentUser.email));
   if (saved) {
     try {
       const parsed = JSON.parse(saved);
@@ -366,7 +372,7 @@ function saveState() {
   const currentUser = getCurrentUser();
   if (!currentUser) return;
   
-  localStorage.setItem(getUserDataKey(currentUser.username), JSON.stringify({
+  localStorage.setItem(getUserDataKey(currentUser.email), JSON.stringify({
     members: state.members,
     focusedPersonId: state.focusedPersonId,
     selectedPersonId: state.selectedPersonId,
@@ -674,7 +680,8 @@ function initUIEvents() {
   document.getElementById('user-account-btn').addEventListener('click', () => {
     const user = getCurrentUser();
     if (user) {
-      showToastConfirm(`Вы вошли как "${user.username}". Выйти?`, logoutUser);
+      const displayName = user.name || user.email;
+      showToastConfirm(`${displayName} (${user.email}). Выйти?`, logoutUser);
     } else {
       showAuthModal();
     }
@@ -1697,10 +1704,14 @@ function initModalTriggers() {
   if (loginForm) {
     loginForm.addEventListener('submit', async (e) => {
       e.preventDefault();
-      const username = document.getElementById('login-username').value.trim();
+      const email = document.getElementById('login-email').value.trim();
       const password = document.getElementById('login-password').value;
+      if (!validateEmail(email)) {
+        showToast('Введите корректную почту', 'error');
+        return;
+      }
       try {
-        await loginUser(username, password);
+        await loginUser(email, password);
         closeModal('modal-login');
         showToast('Вход выполнен', 'success');
         location.reload();
@@ -1714,18 +1725,27 @@ function initModalTriggers() {
   if (registerForm) {
     registerForm.addEventListener('submit', async (e) => {
       e.preventDefault();
-      const username = document.getElementById('register-username').value.trim();
+      const email = document.getElementById('register-email').value.trim();
+      const name = document.getElementById('register-name').value.trim();
       const password = document.getElementById('register-password').value;
       const confirm = document.getElementById('register-confirm').value;
+      if (!validateEmail(email)) {
+        showToast('Введите корректную почту', 'error');
+        return;
+      }
+      if (!name) {
+        showToast('Введите имя', 'error');
+        return;
+      }
       if (password !== confirm) {
         showToast('Пароли не совпадают', 'error');
         return;
       }
       try {
-        await registerUser(username, password);
+        await registerUser(email, name, password);
         closeModal('modal-register');
         showToast('Регистрация успешна', 'success');
-        setCurrentUser(username);
+        setCurrentUser(email.toLowerCase(), name);
         location.reload();
       } catch (err) {
         showToast(err.message, 'error');
