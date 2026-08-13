@@ -205,6 +205,135 @@ let state = {
   }
 };
 
+// --- User Authentication ---
+const AUTH_KEY = 'family_tree_users';
+const SESSION_KEY = 'family_tree_session';
+
+async function hashPassword(password, salt) {
+  const encoder = new TextEncoder();
+  const keyMaterial = await crypto.subtle.importKey(
+    'raw',
+    encoder.encode(password),
+    { name: 'PBKDF2' },
+    false,
+    ['deriveBits']
+  );
+  const hash = await crypto.subtle.deriveBits(
+    {
+      name: 'PBKDF2',
+      salt: encoder.encode(salt),
+      iterations: 100000,
+      hash: 'SHA-256'
+    },
+    keyMaterial,
+    256
+  );
+  return Array.from(new Uint8Array(hash)).map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
+function generateSalt() {
+  const array = new Uint8Array(16);
+  crypto.getRandomValues(array);
+  return Array.from(array).map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
+function getUsers() {
+  const users = localStorage.getItem(AUTH_KEY);
+  return users ? JSON.parse(users) : {};
+}
+
+function saveUsers(users) {
+  localStorage.setItem(AUTH_KEY, JSON.stringify(users));
+}
+
+function getCurrentUser() {
+  const session = localStorage.getItem(SESSION_KEY);
+  return session ? JSON.parse(session) : null;
+}
+
+function setCurrentUser(username) {
+  localStorage.setItem(SESSION_KEY, JSON.stringify({ username, loginTime: Date.now() }));
+}
+
+function clearCurrentUser() {
+  localStorage.removeItem(SESSION_KEY);
+}
+
+async function registerUser(username, password) {
+  const users = getUsers();
+  if (users[username]) {
+    throw new Error('Пользователь уже существует');
+  }
+  const salt = generateSalt();
+  const passwordHash = await hashPassword(password, salt);
+  users[username] = { salt, passwordHash, createdAt: Date.now() };
+  saveUsers(users);
+  return true;
+}
+
+async function loginUser(username, password) {
+  const users = getUsers();
+  const user = users[username];
+  if (!user) {
+    throw new Error('Пользователь не найден');
+  }
+  const passwordHash = await hashPassword(password, user.salt);
+  if (passwordHash !== user.passwordHash) {
+    throw new Error('Неверный пароль');
+  }
+  setCurrentUser(username);
+  return true;
+}
+
+function logoutUser() {
+  clearCurrentUser();
+  location.reload();
+}
+
+function getUserDataKey(username) {
+  return `family_tree_state_${username}`;
+}
+
+function loadState() {
+  const currentUser = getCurrentUser();
+  if (!currentUser) {
+    showAuthModal();
+    return;
+  }
+  
+  const saved = localStorage.getItem(getUserDataKey(currentUser.username));
+  if (saved) {
+    try {
+      const parsed = JSON.parse(saved);
+      state.members = parsed.members || [];
+      state.focusedPersonId = parsed.focusedPersonId || "";
+      state.selectedPersonId = parsed.selectedPersonId || parsed.focusedPersonId || "";
+      state.theme = parsed.theme || "dark";
+    } catch (e) {
+      console.error("Failed to load local state, using samples", e);
+      loadSampleData();
+    }
+  } else {
+    loadSampleData();
+  }
+
+  if (!state.selectedPersonId && state.focusedPersonId) {
+    state.selectedPersonId = state.focusedPersonId;
+  }
+}
+
+function saveState() {
+  const currentUser = getCurrentUser();
+  if (!currentUser) return;
+  
+  localStorage.setItem(getUserDataKey(currentUser.username), JSON.stringify({
+    members: state.members,
+    focusedPersonId: state.focusedPersonId,
+    selectedPersonId: state.selectedPersonId,
+    theme: state.theme
+  }));
+}
+
 // Layout coordinates
 let currentLayout = null;
 
@@ -491,6 +620,16 @@ function initUIEvents() {
   document.getElementById('mass-select-all-btn').addEventListener('click', selectAllMembers);
   document.getElementById('mass-delete-btn').addEventListener('click', massDeleteMembers);
   document.getElementById('mass-cancel-btn').addEventListener('click', exitMassMode);
+
+  // User Account Button
+  document.getElementById('user-account-btn').addEventListener('click', () => {
+    const user = getCurrentUser();
+    if (user) {
+      showToastConfirm(`Вы вошли как "${user.username}". Выйти?`, logoutUser);
+    } else {
+      showAuthModal();
+    }
+  });
 
   // Modals Buttons
   initModalTriggers();
@@ -1500,6 +1639,57 @@ function initModalTriggers() {
       }
     });
   });
+
+  // Auth modal handlers
+  const loginForm = document.getElementById('login-form');
+  if (loginForm) {
+    loginForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const username = document.getElementById('login-username').value.trim();
+      const password = document.getElementById('login-password').value;
+      try {
+        await loginUser(username, password);
+        closeModal('modal-login');
+        showToast('Вход выполнен', 'success');
+        location.reload();
+      } catch (err) {
+        showToast(err.message, 'error');
+      }
+    });
+  }
+
+  const registerForm = document.getElementById('register-form');
+  if (registerForm) {
+    registerForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const username = document.getElementById('register-username').value.trim();
+      const password = document.getElementById('register-password').value;
+      const confirm = document.getElementById('register-confirm').value;
+      if (password !== confirm) {
+        showToast('Пароли не совпадают', 'error');
+        return;
+      }
+      try {
+        await registerUser(username, password);
+        closeModal('modal-register');
+        showToast('Регистрация успешна', 'success');
+        setCurrentUser(username);
+        location.reload();
+      } catch (err) {
+        showToast(err.message, 'error');
+      }
+    });
+  }
+
+  document.getElementById('switch-to-register')?.addEventListener('click', () => {
+    closeModal('modal-login');
+    openModal('modal-register');
+  });
+
+  document.getElementById('switch-to-login')?.addEventListener('click', () => {
+    closeModal('modal-register');
+    openModal('modal-login');
+  });
 }
 
 function openModal(id) {
@@ -1508,6 +1698,10 @@ function openModal(id) {
 
 function closeModal(id) {
   document.getElementById(id).classList.remove('open');
+}
+
+function showAuthModal() {
+  openModal('modal-login');
 }
 
 // --- Relationship Calculator Operations ---

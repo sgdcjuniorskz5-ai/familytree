@@ -73,6 +73,9 @@
       <button class="btn btn-icon" id="mass-select-toggle-btn" data-tooltip="Массовое удаление">
         <i class="fas fa-check-double"></i>
       </button>
+      <button class="btn btn-icon" id="user-account-btn" data-tooltip="Аккаунт">
+        <i class="fas fa-user"></i>
+      </button>
       <span class="header-divider"></span>
       <button class="btn btn-icon" id="export-png-btn" data-tooltip="Экспорт в PNG">
         <i class="fas fa-image"></i>
@@ -513,10 +516,66 @@
           <button type="submit" class="btn btn-primary" style="width:100%; height:44px; margin-top:10px;"><i class="fas fa-user-plus"></i> Создать карточку</button>
         </form>
       </div>
+</div>
+</div>
+
+<!-- Modal: Login -->
+<div class="modal-overlay" id="modal-login">
+  <div class="modal-container" style="max-width: 400px;">
+    <div class="modal-header">
+      <h3>Вход в аккаунт</h3>
+      <button class="close-modal-btn"><i class="fas fa-times"></i></button>
+    </div>
+    <div class="modal-body">
+      <form id="login-form">
+        <div class="form-group">
+          <label for="login-username">Имя пользователя</label>
+          <input type="text" id="login-username" class="form-input" required autocomplete="username">
+        </div>
+        <div class="form-group">
+          <label for="login-password">Пароль</label>
+          <input type="password" id="login-password" class="form-input" required autocomplete="current-password">
+        </div>
+        <button type="submit" class="btn btn-primary" style="width:100%; height:44px; margin-top:10px;"><i class="fas fa-sign-in-alt"></i> Войти</button>
+      </form>
+      <p style="text-align:center; margin-top:15px; font-size:13px; color:var(--text-secondary);">
+        Нет аккаунта? <button type="button" class="btn-link" id="switch-to-register">Зарегистрироваться</button>
+      </p>
     </div>
   </div>
+</div>
 
-  <!-- Load scripts in correct order as plain scripts (offline compatible) -->
+<!-- Modal: Register -->
+<div class="modal-overlay" id="modal-register">
+  <div class="modal-container" style="max-width: 400px;">
+    <div class="modal-header">
+      <h3>Регистрация</h3>
+      <button class="close-modal-btn"><i class="fas fa-times"></i></button>
+    </div>
+    <div class="modal-body">
+      <form id="register-form">
+        <div class="form-group">
+          <label for="register-username">Имя пользователя</label>
+          <input type="text" id="register-username" class="form-input" required autocomplete="username" minlength="3" maxlength="30">
+        </div>
+        <div class="form-group">
+          <label for="register-password">Пароль</label>
+          <input type="password" id="register-password" class="form-input" required autocomplete="new-password" minlength="6">
+        </div>
+        <div class="form-group">
+          <label for="register-confirm">Подтвердите пароль</label>
+          <input type="password" id="register-confirm" class="form-input" required autocomplete="new-password">
+        </div>
+        <button type="submit" class="btn btn-primary" style="width:100%; height:44px; margin-top:10px;"><i class="fas fa-user-plus"></i> Зарегистрироваться</button>
+      </form>
+      <p style="text-align:center; margin-top:15px; font-size:13px; color:var(--text-secondary);">
+        Уже есть аккаунт? <button type="button" class="btn-link" id="switch-to-login">Войти</button>
+      </p>
+    </div>
+  </div>
+</div>
+
+<!-- Load scripts in correct order as plain scripts (offline compatible) -->
   <script src="sample-data.js?v=9"></script>
   <script src="relationship.js?v=9"></script>
   <script src="tree-layout.js?v=9"></script>
