@@ -576,11 +576,11 @@
 </div>
 
 <!-- Load scripts in correct order as plain scripts (offline compatible) -->
-  <script src="sample-data.js?v=9"></script>
-  <script src="relationship.js?v=9"></script>
-  <script src="tree-layout.js?v=9"></script>
-  <script src="tree-renderer.js?v=9"></script>
-  <script src="app.js?v=9"></script>
+  <script src="sample-data.js?v=10"></script>
+  <script src="relationship.js?v=10"></script>
+  <script src="tree-layout.js?v=10"></script>
+  <script src="tree-renderer.js?v=10"></script>
+  <script src="app.js?v=10"></script>
 
   <!-- Toast Notification Container -->
   <div id="toast-container"></div>
@@ -601,7 +601,7 @@
         });
       });
       window.addEventListener('load', () => {
-        navigator.serviceWorker.register('service-worker.js?v=9')
+        navigator.serviceWorker.register('service-worker.js?v=10')
           .then(reg => console.log('[App] SW registered:', reg.scope))
           .catch(err => console.warn('[App] SW failed:', err));
       });

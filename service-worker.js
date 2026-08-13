@@ -1,7 +1,7 @@
 // service-worker.js
 // Family Tree PWA Service Worker - Network First Strategy
 
-const CACHE_NAME = 'family-tree-v11';
+const CACHE_NAME = 'family-tree-v12';
 
 const PRECACHE_URLS = [
   './',
@@ -13,6 +13,8 @@ const PRECACHE_URLS = [
   './tree-renderer.js',
   './relationship.js',
   './manifest.json',
+  './icon-192.png',
+  './icon-512.png',
 ];
 
 self.addEventListener('install', (event) => {
